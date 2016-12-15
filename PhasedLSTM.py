@@ -6,10 +6,11 @@ from keras import activations, initializations, regularizers
 from keras.engine import Layer, InputSpec
 from keras.layers.recurrent import Recurrent
 
+
 class PhasedLSTM(Recurrent):
     '''
-    Phased LSTM implementation in Keras. Working only for Theano due to TF limitation of K.switch
-    See pull request https://github.com/fchollet/keras/pull/4519
+    LSTM with timegate (Phased LSTM).
+    Working only for Theano due to TF limitation of K.switch (https://github.com/fchollet/keras/pull/4519)
     
     # Arguments
         output_dim: dimension of the internal projections and the final output.
@@ -34,9 +35,9 @@ class PhasedLSTM(Recurrent):
         dropout_U: float between 0 and 1. Fraction of the input units to drop for recurrent connections.
         alpha: float between 0 and 1. Leak fraction of time gate.
     # References
-    Daniel Neil, Michael Pfeiffer, Shih-Chii Liu,
-    Phased LSTM: Accelerating Recurrent Network Training for Long or Event-based Sequences
-    https://arxiv.org/abs/1610.09513
+        - [Phased LSTM: Accelerating Recurrent Network Training for Long or Event-based Sequences](https://arxiv.org/abs/1610.09513)
+        - [Long short-term memory](http://deeplearning.cs.cmu.edu/pdfs/Hochreiter97_lstm.pdf)
+        - [A Theoretically Grounded Application of Dropout in Recurrent Neural Networks](http://arxiv.org/abs/1512.05287)
     '''
     def __init__(self, output_dim,
                  init='glorot_uniform', inner_init='orthogonal',
@@ -67,8 +68,7 @@ class PhasedLSTM(Recurrent):
         if self.stateful:
             self.reset_states()
         else:
-            # initial states: 3 all-zero tensors of shape (output_dim)
-            # h,c,t
+            # initial states: 3 all-zero tensors of shape (output_dim): h,c,t
             self.states = [None, None, None]
 
         self.W = self.init((self.input_dim, 4 * self.output_dim),
@@ -117,8 +117,11 @@ class PhasedLSTM(Recurrent):
                         np.zeros((input_shape[0], self.output_dim)))
             K.set_value(self.states[1],
                         np.zeros((input_shape[0], self.output_dim)))
+            K.set_value(self.states[2],
+                        np.zeros((input_shape[0], self.output_dim)))
         else:
             self.states = [K.zeros((input_shape[0], self.output_dim)),
+                           K.zeros((input_shape[0], self.output_dim)),
                            K.zeros((input_shape[0], self.output_dim))]
 
     def preprocess_input(self, x):
@@ -147,8 +150,7 @@ class PhasedLSTM(Recurrent):
         is_down = K.greater(phi, on_mid) & K.lesser_equal(phi, on_end)
         k = K.switch(is_up, phi/on_mid, K.switch(is_down, (on_end-phi)/on_mid, self.alpha*phi))
         
-        # standard LSTM calculations, sharing dropout B_U and B_W for i,f,c,o to speed things up.
-        # add CPU/GPU/MEM options later
+        # LSTM calculations
         z = K.dot(x * B_W[0], self.W) + K.dot(h_tm1 * B_U[0], self.U) + self.b
         
         z0 = z[:, :self.output_dim]
@@ -186,13 +188,10 @@ class PhasedLSTM(Recurrent):
             constants.append(B_W)
         else:
             constants.append([K.cast_to_floatx(1.) for _ in range(4)])
-
-        #add 
         return constants
 
     def get_config(self):
         config = {'output_dim': self.output_dim,
-                  'alpha': self.alpha,
                   'init': self.init.__name__,
                   'inner_init': self.inner_init.__name__,
                   'forget_bias_init': self.forget_bias_init.__name__,
@@ -202,6 +201,10 @@ class PhasedLSTM(Recurrent):
                   'U_regularizer': self.U_regularizer.get_config() if self.U_regularizer else None,
                   'b_regularizer': self.b_regularizer.get_config() if self.b_regularizer else None,
                   'dropout_W': self.dropout_W,
-                  'dropout_U': self.dropout_U}
+                  'dropout_U': self.dropout_U,
+                  'alpha': self.alpha,}
         base_config = super(PhasedLSTM, self).get_config()
         return dict(list(base_config.items()) + list(config.items()))
+
+
+
