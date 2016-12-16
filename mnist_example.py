@@ -1,15 +1,33 @@
 from PhasedLSTM import PhasedLSTM as PLSTM
 import numpy as np
+import matplotlib.pyplot as plt
 from keras.datasets import mnist
 from keras.models import Sequential
 from keras.layers import Dense, Flatten, LSTM
 from keras.utils import np_utils
+from keras.callbacks import Callback
+
+
+class AccHistory(Callback):
+    def on_train_begin(self, logs={}):
+        self.losses = []
+
+    def on_batch_end(self, batch, logs={}):
+        self.losses.append(logs.get('acc'))
+
+
+class LossHistory(Callback):
+    def on_train_begin(self, logs={}):
+        self.losses = []
+
+    def on_batch_end(self, batch, logs={}):
+        self.losses.append(logs.get('loss'))
 
 
 def main():
 	batch_size = 256
 	nb_classes = 10
-	nb_epoch = 5
+	nb_epoch = 20
 
 	# input image dimensions
 	img_rows, img_cols = 28, 28
@@ -36,7 +54,9 @@ def main():
 	model_PLSTM.add(Dense(10, activation='softmax'))
 	model_PLSTM.compile(optimizer='rmsprop', loss='categorical_crossentropy', metrics=['accuracy'])
 	model_PLSTM.summary()
-	model_PLSTM.fit(X_train, Y_train, nb_epoch=nb_epoch, batch_size=batch_size)
+	acc_PLSTM = AccHistory()
+	loss_PLSTM = LossHistory()
+	model_PLSTM.fit(X_train, Y_train, nb_epoch=nb_epoch, batch_size=batch_size, callbacks=[acc_PLSTM, loss_PLSTM])
 	score_PLSTM = model_PLSTM.evaluate(X_test, Y_test, verbose=0)
 
 	# Vanilla LSTM
@@ -45,8 +65,29 @@ def main():
 	model_LSTM.add(Dense(10, activation='softmax'))
 	model_LSTM.compile(optimizer='rmsprop', loss='categorical_crossentropy', metrics=['accuracy'])
 	model_LSTM.summary()
-	model_LSTM.fit(X_train, Y_train, nb_epoch=nb_epoch, batch_size=batch_size)
+	acc_LSTM = AccHistory()
+	loss_LSTM = LossHistory()
+	model_LSTM.fit(X_train, Y_train, nb_epoch=nb_epoch, batch_size=batch_size, callbacks=[acc_LSTM, loss_LSTM])
 	score_LSTM = model_LSTM.evaluate(X_test, Y_test, verbose=0)
+
+	# plot results
+	plt.figure(1,figsize=(10,10))
+	plt.title('Accuracy on MNIST training dataset')
+	plt.xlabel('Iterations, batch size ' + str(batch_size))
+	plt.ylabel('Classification accuracy')
+	plt.plot(acc_LSTM.losses, color='k', label='LSTM')
+	plt.hold(True)
+	plt.plot(acc_PLSTM.losses, color='r', label='PLSTM')
+	plt.savefig('mnist_plstm_lstm_comparison_acc.png', dpi=100)
+
+	plt.figure(2,figsize=(10,10))
+	plt.title('Loss on MNIST training dataset')
+	plt.xlabel('Iterations, batch size ' + str(batch_size))
+	plt.ylabel('Categorical cross-entropy')
+	plt.plot(loss_LSTM.losses, color='k', label='LSTM')
+	plt.hold(True)
+	plt.plot(loss_PLSTM.losses, color='r', label='PLSTM')
+	plt.savefig('mnist_plstm_lstm_comparison_loss.png', dpi=100)
 
 	# Compare test performance
 	print('Test score LSTM:', score_LSTM[0])

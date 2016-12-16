@@ -145,7 +145,8 @@ class PhasedLSTM(Recurrent):
         on_end = self.timegate[2] * period
         
         # double mod necessary to make behaviour consistent in Theano and Tensorflow
-        phi = ((((t - shift) % period) + period) % period) / period 
+        # phi = ((((t - shift) % period) + period) % period) / period
+        phi = ((t - shift) % period) / period
         is_up = K.lesser_equal(phi, on_mid)
         is_down = K.greater(phi, on_mid) & K.lesser_equal(phi, on_end)
         k = K.switch(is_up, phi/on_mid, K.switch(is_down, (on_end-phi)/on_mid, self.alpha*phi))
