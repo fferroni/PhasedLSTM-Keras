@@ -2,7 +2,7 @@
 
 Keras implementation of Phased LSTM [https://arxiv.org/abs/1610.09513], from NIPS 2016.
 
-Currently working only on Theano backend (https://github.com/fchollet/keras/pull/4519).
+Works both with Theano and Tensorflow backend (although Theano recommended, as 3x faster).
 
 Classification performance compared to standard Keras LSTM for MNIST dataset:
 

@@ -10,20 +10,20 @@ from keras.layers.recurrent import Recurrent
 class PhasedLSTM(Recurrent):
     '''
     LSTM with timegate (Phased LSTM).
-    Working only for Theano due to TF limitation of K.switch (https://github.com/fchollet/keras/pull/4519)
+    Theano backend recommended [~3x faster on GPU].
     
     # Arguments
         output_dim: dimension of the internal projections and the final output.
         init: weight initialization function.
             Can be the name of an existing function (str),
-            or a Theano function (see: [initializations](../initializations.md)).
+            or a K function (see: [initializations](../initializations.md)).
         inner_init: initialization function of the inner cells.
         forget_bias_init: initialization function for the bias of the forget gate.
             [Jozefowicz et al.](http://www.jmlr.org/proceedings/papers/v37/jozefowicz15.pdf)
             recommend initializing with ones.
         activation: activation function.
             Can be the name of an existing function (str),
-            or a Theano function (see: [activations](../activations.md)).
+            or a K function (see: [activations](../activations.md)).
         inner_activation: activation function for the inner cells.
         W_regularizer: instance of [WeightRegularizer](../regularizers.md)
             (eg. L1 or L2 regularization), applied to the input weights matrices.
@@ -141,16 +141,20 @@ class PhasedLSTM(Recurrent):
         self.timegate = K.abs(self.timegate)
         period = self.timegate[0]
         shift = self.timegate[1]
-        on_mid = self.timegate[2] * 0.5 * period
-        on_end = self.timegate[2] * period
-        
-        # double mod necessary to make behaviour consistent in Theano and Tensorflow
-        # phi = ((((t - shift) % period) + period) % period) / period
-        phi = ((t - shift) % period) / period
-        is_up = K.lesser_equal(phi, on_mid)
-        is_down = K.greater(phi, on_mid) & K.lesser_equal(phi, on_end)
-        k = K.switch(is_up, phi/on_mid, K.switch(is_down, (on_end-phi)/on_mid, self.alpha*phi))
-        
+        r_on = self.timegate[2]
+
+        # modulo operation not implemented in Tensorflow backend, so write explicitly.
+        # a mod n = a - (n * int(a/n))
+        # phi = ((t - shift) % period) / period
+        phi = ((t - shift) - (period * ((t - shift) // period))) / period
+
+        # K.switch not consistent between Theano and Tensorflow backend, so write explicitly.
+        up = K.cast(K.lesser(phi, r_on * 0.5), K.floatx()) * 2 * phi / r_on
+        mid = K.cast(K.lesser(phi, r_on), K.floatx()) *\
+        	  K.cast(K.greater(phi, r_on * 0.5), K.floatx()) * (2 - (2 * phi / r_on))
+        end = K.cast(K.greater(phi, r_on * 0.5), K.floatx()) * self.alpha * phi
+        k = up + mid + end
+
         # LSTM calculations
         z = K.dot(x * B_W[0], self.W) + K.dot(h_tm1 * B_U[0], self.U) + self.b
         

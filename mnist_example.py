@@ -25,7 +25,7 @@ class LossHistory(Callback):
 
 
 def main():
-	batch_size = 256
+	batch_size = 128
 	nb_classes = 10
 	nb_epoch = 20
 
