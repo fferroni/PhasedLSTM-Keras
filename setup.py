@@ -33,7 +33,7 @@ setup(
 
     # Author details
     author='fferoni',
-    # author_email='albert.aparicio.isarn@alu-etsetb.upc.edu',
+    # author_email='your_email@example.com',
 
     # Choose your license
     license='GPLv3+',
