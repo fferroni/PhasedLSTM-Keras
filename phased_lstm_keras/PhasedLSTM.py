@@ -1,9 +1,9 @@
 from __future__ import absolute_import
-import numpy as np
 
-from keras import backend as K
+import numpy as np
 from keras import activations, initializations, regularizers
-from keras.engine import Layer, InputSpec
+from keras import backend as K
+from keras.engine import InputSpec
 from keras.layers.recurrent import Recurrent
 
 
@@ -39,6 +39,7 @@ class PhasedLSTM(Recurrent):
         - [Long short-term memory](http://deeplearning.cs.cmu.edu/pdfs/Hochreiter97_lstm.pdf)
         - [A Theoretically Grounded Application of Dropout in Recurrent Neural Networks](http://arxiv.org/abs/1512.05287)
     '''
+
     def __init__(self, output_dim,
                  init='glorot_uniform', inner_init='orthogonal',
                  forget_bias_init='one', activation='tanh',
@@ -77,16 +78,18 @@ class PhasedLSTM(Recurrent):
                                  name='{}_U'.format(self.name))
 
         self.b = K.variable(np.hstack((np.zeros(self.output_dim),
-                                       K.get_value(self.forget_bias_init((self.output_dim,))),
+                                       K.get_value(self.forget_bias_init(
+                                           (self.output_dim,))),
                                        np.zeros(self.output_dim),
                                        np.zeros(self.output_dim))),
                             name='{}_b'.format(self.name))
 
         # all three variables (period, phase and r_on) are learnable
-        self.timegate = K.variable(np.vstack((np.random.uniform(10, 100, self.output_dim),
-                                              np.random.uniform(0, 1000, self.output_dim),
-                                              np.zeros(self.output_dim)+0.05)),
-                                   name='{}_tgate'.format(self.name))
+        self.timegate = K.variable(
+            np.vstack((np.random.uniform(10, 100, self.output_dim),
+                       np.random.uniform(0, 1000, self.output_dim),
+                       np.zeros(self.output_dim) + 0.05)),
+            name='{}_tgate'.format(self.name))
 
         self.trainable_weights = [self.W, self.U, self.b, self.timegate]
 
@@ -133,7 +136,7 @@ class PhasedLSTM(Recurrent):
         t_tm1 = states[2]
         B_U = states[3]
         B_W = states[4]
-        
+
         # time related variables, simply add +1 to t for now...starting from 0
         # need to find better way if asynchronous/irregular time input is desired
         # such as slicing input where first index is time and using that instead.
@@ -150,14 +153,15 @@ class PhasedLSTM(Recurrent):
 
         # K.switch not consistent between Theano and Tensorflow backend, so write explicitly.
         up = K.cast(K.lesser(phi, r_on * 0.5), K.floatx()) * 2 * phi / r_on
-        mid = K.cast(K.lesser(phi, r_on), K.floatx()) *\
-        	  K.cast(K.greater(phi, r_on * 0.5), K.floatx()) * (2 - (2 * phi / r_on))
+        mid = K.cast(K.lesser(phi, r_on), K.floatx()) * \
+              K.cast(K.greater(phi, r_on * 0.5), K.floatx()) * (
+              2 - (2 * phi / r_on))
         end = K.cast(K.greater(phi, r_on * 0.5), K.floatx()) * self.alpha * phi
         k = up + mid + end
 
         # LSTM calculations
         z = K.dot(x * B_W[0], self.W) + K.dot(h_tm1 * B_U[0], self.U) + self.b
-        
+
         z0 = z[:, :self.output_dim]
         z1 = z[:, self.output_dim: 2 * self.output_dim]
         z2 = z[:, 2 * self.output_dim: 3 * self.output_dim]
@@ -179,7 +183,8 @@ class PhasedLSTM(Recurrent):
         if 0 < self.dropout_U < 1:
             ones = K.ones_like(K.reshape(x[:, 0, 0], (-1, 1)))
             ones = K.tile(ones, (1, self.output_dim))
-            B_U = [K.in_train_phase(K.dropout(ones, self.dropout_U), ones) for _ in range(4)]
+            B_U = [K.in_train_phase(K.dropout(ones, self.dropout_U), ones) for _
+                   in range(4)]
             constants.append(B_U)
         else:
             constants.append([K.cast_to_floatx(1.) for _ in range(4)])
@@ -189,7 +194,8 @@ class PhasedLSTM(Recurrent):
             input_dim = input_shape[-1]
             ones = K.ones_like(K.reshape(x[:, 0, 0], (-1, 1)))
             ones = K.tile(ones, (1, int(input_dim)))
-            B_W = [K.in_train_phase(K.dropout(ones, self.dropout_W), ones) for _ in range(4)]
+            B_W = [K.in_train_phase(K.dropout(ones, self.dropout_W), ones) for _
+                   in range(4)]
             constants.append(B_W)
         else:
             constants.append([K.cast_to_floatx(1.) for _ in range(4)])
@@ -210,6 +216,3 @@ class PhasedLSTM(Recurrent):
                   'alpha': self.alpha}
         base_config = super(PhasedLSTM, self).get_config()
         return dict(list(base_config.items()) + list(config.items()))
-
-
-
