@@ -32,8 +32,8 @@ setup(
     url='https://github.com/fferroni/PhasedLSTM-Keras',
 
     # Author details
-    author='fferoni',
-    # author_email='your_email@example.com',
+    author='Francesco Ferroni',
+    author_email='francescoferroni1@gmail.com',
 
     # Choose your license
     license='GPLv3+',
