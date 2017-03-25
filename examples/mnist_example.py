@@ -28,7 +28,7 @@ class LossHistory(Callback):
 def main():
     batch_size = 128
     nb_classes = 10
-    nb_epoch = 20
+    nb_epoch = 2
 
     # input image dimensions
     img_rows, img_cols = 28, 28
@@ -51,27 +51,27 @@ def main():
 
     # LSTM with timegate
     model_PLSTM = Sequential()
-    model_PLSTM.add(PLSTM(32, input_shape=(28 * 28, 1), consume_less='gpu'))
+    model_PLSTM.add(PLSTM(32, input_shape=(28 * 28, 1), implementation=2))
     model_PLSTM.add(Dense(10, activation='softmax'))
     model_PLSTM.compile(optimizer='rmsprop', loss='categorical_crossentropy',
                         metrics=['accuracy'])
     model_PLSTM.summary()
     acc_PLSTM = AccHistory()
     loss_PLSTM = LossHistory()
-    model_PLSTM.fit(X_train, Y_train, nb_epoch=nb_epoch, batch_size=batch_size,
+    model_PLSTM.fit(X_train, Y_train, epochs=nb_epoch, batch_size=batch_size,
                     callbacks=[acc_PLSTM, loss_PLSTM])
     score_PLSTM = model_PLSTM.evaluate(X_test, Y_test, verbose=0)
 
     # Vanilla LSTM
     model_LSTM = Sequential()
-    model_LSTM.add(LSTM(32, input_shape=(28 * 28, 1), consume_less='gpu'))
+    model_LSTM.add(LSTM(32, input_shape=(28 * 28, 1), implementation=2))
     model_LSTM.add(Dense(10, activation='softmax'))
     model_LSTM.compile(optimizer='rmsprop', loss='categorical_crossentropy',
                        metrics=['accuracy'])
     model_LSTM.summary()
     acc_LSTM = AccHistory()
     loss_LSTM = LossHistory()
-    model_LSTM.fit(X_train, Y_train, nb_epoch=nb_epoch, batch_size=batch_size,
+    model_LSTM.fit(X_train, Y_train, epochs=nb_epoch, batch_size=batch_size,
                    callbacks=[acc_LSTM, loss_LSTM])
     score_LSTM = model_LSTM.evaluate(X_test, Y_test, verbose=0)
 
