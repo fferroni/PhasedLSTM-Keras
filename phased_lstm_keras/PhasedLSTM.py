@@ -156,7 +156,7 @@ class PhasedLSTM(Recurrent):
         mid = K.cast(K.lesser(phi, r_on), K.floatx()) * \
               K.cast(K.greater(phi, r_on * 0.5), K.floatx()) * (
               2 - (2 * phi / r_on))
-        end = K.cast(K.greater(phi, r_on * 0.5), K.floatx()) * self.alpha * phi
+        end = K.cast(K.greater(phi, r_on), K.floatx()) * self.alpha * phi
         k = up + mid + end
 
         # LSTM calculations
