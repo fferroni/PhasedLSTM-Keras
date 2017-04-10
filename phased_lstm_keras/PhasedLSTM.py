@@ -11,7 +11,6 @@ from keras.engine import InputSpec
 from keras.legacy import interfaces
 from keras.layers import Recurrent
 
-
 def _time_distributed_dense(x, w, b=None, dropout=None,
                             input_dim=None, output_dim=None,
                             timesteps=None, training=None):
@@ -56,15 +55,12 @@ def _time_distributed_dense(x, w, b=None, dropout=None,
         x = K.reshape(x, (-1, timesteps, output_dim))
     return x
 
-
-def _timegate_initializer(shape, dtype=None):
-    assert len(shape)==2
-    assert shape[0]==3
-    return K.variable(np.vstack((np.random.uniform(10, 100, shape[1]),
+def _timegate_init(shape, dtype=None):
+        assert len(shape)==2
+        return K.constant(np.vstack((np.random.uniform(10, 100, shape[1]),
                       np.random.uniform(0, 1000, shape[1]),
                       np.zeros(shape[1]) + 0.05)),
                       dtype=dtype)
-
 
 class PhasedLSTM(Recurrent):
     """LSTM with timegate (Phased LSTM).
@@ -134,7 +130,7 @@ class PhasedLSTM(Recurrent):
                  recurrent_initializer='orthogonal',
                  bias_initializer='zeros',
                  unit_forget_bias=True,
-                 timegate_initializer=_timegate_initializer,
+                 timegate_initializer=_timegate_init,
                  kernel_regularizer=None,
                  recurrent_regularizer=None,
                  bias_regularizer=None,
