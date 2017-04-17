@@ -10,6 +10,7 @@ from keras import constraints
 from keras.engine import InputSpec
 from keras.legacy import interfaces
 from keras.layers import Recurrent
+from keras.utils.generic_utils import get_custom_objects
 
 def _time_distributed_dense(x, w, b=None, dropout=None,
                             input_dim=None, output_dim=None,
@@ -395,3 +396,6 @@ class PhasedLSTM(Recurrent):
                   'recurrent_dropout': self.recurrent_dropout}
         base_config = super(PhasedLSTM, self).get_config()
         return dict(list(base_config.items()) + list(config.items()))
+
+
+get_custom_objects().update({'PhasedLSTM': PhasedLSTM})
